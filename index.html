@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VocabMaster Pro - Akıllı İngilizce Kelime & Leitner Aralıklı Tekrar</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="index.css">
+  <!-- PWA & Mobile Web App Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#131b2e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="VocabMaster">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="apple-touch-icon" href="icon-192.png">
+</head>
+<body>
+
+  <!-- ===== MOBILE TOP BAR (visible only on mobile, hidden on desktop) ===== -->
+  <div class="mobile-topbar">
+    <a href="#" class="mobile-topbar-brand">
+      <div class="brand-icon">
+        <i class="fa-solid fa-brain"></i>
+      </div>
+      <div class="brand-text">Vocab<span>Master</span></div>
+    </a>
+    <div style="display: flex; align-items: center; gap: 0.5rem;">
+      <button class="btn-install-app mobile" id="btn-install-pwa-mobile" onclick="triggerPWAInstall()" style="display: none;" title="Uygulamayı Telefona Yükle">
+        <i class="fa-solid fa-download"></i> Yükle
+      </button>
+      <button class="theme-toggle-btn" id="theme-toggle-mobile" title="Tema Değiştir" onclick="toggleTheme()">
+        <i class="fa-solid fa-moon"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ===== MOBILE BOTTOM NAVIGATION (visible only on mobile) ===== -->
+  <nav class="mobile-bottom-nav">
+    <button class="mobile-nav-btn active" id="mob-nav-search" onclick="switchTab('search'); setMobileActive(this)">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <span>Sözlük</span>
+    </button>
+    <button class="mobile-nav-btn" id="mob-nav-words" onclick="switchTab('words'); setMobileActive(this)">
+      <i class="fa-solid fa-layer-group"></i>
+      <span>Kelimeler</span>
+    </button>
+    <button class="mobile-nav-btn" id="mob-nav-practice" onclick="switchTab('practice'); setMobileActive(this)">
+      <i class="fa-solid fa-fire"></i>
+      <span>Pratik</span>
+    </button>
+    <button class="mobile-nav-btn" id="mob-nav-generator" onclick="switchTab('generator'); setMobileActive(this)">
+      <i class="fa-solid fa-wand-magic-sparkles"></i>
+      <span>Paragraf</span>
+    </button>
+    <button class="mobile-nav-btn" id="mob-nav-bundles" onclick="switchTab('bundles'); setMobileActive(this)">
+      <i class="fa-solid fa-box-archive"></i>
+      <span>Paketler</span>
+    </button>
+  </nav>
+
+  <!-- Animated Background Blobs -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <!-- FLOATING WORD POPUP TRANSLATOR TOOLTIP WITH POS BADGE -->
+  <div id="word-popover" class="word-popover" style="display: none;">
+    <div class="popover-header">
+      <div class="popover-title-group">
+        <div class="popover-title" id="popover-word-title">Word</div>
+        <span class="pos-tag" id="popover-pos-tag" style="font-size: 0.72rem; padding: 0.15rem 0.5rem; margin-bottom: 0; text-transform: uppercase;">
+          <i class="fa-solid fa-cube"></i> noun
+        </span>
+      </div>
+      <div style="display: flex; gap: 0.25rem;">
+        <button class="card-action-icon" id="popover-audio-btn" title="Dinle">
+          <i class="fa-solid fa-volume-high"></i>
+        </button>
+        <button class="card-action-icon" onclick="closeWordPopover()" title="Kapat">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+    </div>
+    <div class="popover-tr" id="popover-tr-text">
+      <i class="fa-solid fa-spinner fa-spin"></i> Çevriliyor...
+    </div>
+    <div class="popover-actions">
+      <button class="btn-primary" id="popover-add-btn" style="width: 100%; padding: 0.5rem 0.75rem; font-size: 0.85rem;">
+        <i class="fa-solid fa-plus"></i> Kütüphaneme Ekle
+      </button>
+    </div>
+  </div>
+
+  <!-- WRONG ANSWER WORD ADD PROMPT MODAL -->
+  <div id="wrong-word-modal" class="glass-card" style="display: none; position: fixed; bottom: 2rem; right: 2rem; z-index: 10000; max-width: 400px; padding: 1.25rem; border: 2px solid var(--accent-primary); box-shadow: 0 10px 30px rgba(0,0,0,0.5); background: var(--bg-secondary);">
+    <div style="display: flex; gap: 0.75rem; align-items: flex-start;">
+      <div style="font-size: 1.8rem; color: var(--warning);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+      <div style="flex: 1;">
+        <div style="font-weight: 700; font-size: 1rem; color: var(--text-primary);" id="wrong-word-modal-title">Yanlış Yanıtladınız!</div>
+        <div style="font-size: 0.88rem; color: var(--text-secondary); margin: 0.4rem 0;" id="wrong-word-modal-text">Bu kelime kelimeleriniz arasına eklensin mi?</div>
+        <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;" id="wrong-word-modal-actions">
+          <button class="btn-primary" id="wrong-word-modal-add-btn" style="padding: 0.45rem 0.85rem; font-size: 0.82rem;">
+            <i class="fa-solid fa-plus"></i> Kütüphaneme Ekle
+          </button>
+          <button class="btn-secondary" onclick="closeWrongWordModal()" style="padding: 0.45rem 0.85rem; font-size: 0.82rem;">
+            Kapat
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Application Container -->
+  <div id="app">
+    
+    <!-- Top Navigation Bar -->
+    <header class="navbar">
+      <a href="#" class="brand">
+        <div class="brand-icon">
+          <i class="fa-solid fa-brain"></i>
+        </div>
+        <div class="brand-text">Vocab<span>Master</span></div>
+      </a>
+
+      <nav class="nav-links">
+        <button class="nav-btn active" id="nav-btn-search" onclick="switchTab('search')">
+          <i class="fa-solid fa-magnifying-glass"></i> Sözlük & Ekle
+        </button>
+        <button class="nav-btn" id="nav-btn-words" onclick="switchTab('words')">
+          <i class="fa-solid fa-layer-group"></i> Kelimelerim
+        </button>
+        <button class="nav-btn" id="nav-btn-practice" onclick="switchTab('practice')">
+          <i class="fa-solid fa-fire"></i> Tekrar & Pratik
+        </button>
+        <button class="nav-btn" id="nav-btn-generator" onclick="switchTab('generator')">
+          <i class="fa-solid fa-wand-magic-sparkles"></i> Paragraf & Soru
+        </button>
+        <button class="nav-btn" id="nav-btn-bundles" onclick="switchTab('bundles')">
+          <i class="fa-solid fa-box-archive"></i> Paketler
+        </button>
+      </nav>
+
+      <div class="nav-actions">
+        <button class="btn-install-app" id="btn-install-pwa" onclick="triggerPWAInstall()" style="display: none;" title="Uygulamayı Masaüstüne Yükle">
+          <i class="fa-solid fa-cloud-arrow-down"></i> Uygulamayı Yükle
+        </button>
+        <button class="theme-toggle-btn" id="theme-toggle" title="Tema Değiştir" onclick="toggleTheme()">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Tab Panes -->
+    <main class="main-content">
+
+      <!-- ================= TAB 1: DICTIONARY & SEARCH ================= -->
+      <section id="tab-search" class="tab-pane active">
+        <div class="section-header text-center" style="text-align: center; max-width: 600px; margin: 0 auto 2rem auto;">
+          <h1 class="section-title" style="justify-content: center;">
+            <i class="fa-solid fa-book-bookmark" style="color: var(--accent-primary);"></i> Akıllı Kelime Arama
+          </h1>
+          <p class="section-subtitle">İngilizce kelimeyi girin; eş anlamlıları, sözlük tanımı, okunuşu ve cümle içi örnekleri anında otomatik getirilsin.</p>
+        </div>
+
+        <!-- Search Input Bar -->
+        <div class="search-container">
+          <form onsubmit="handleWordSearch(event)" class="search-box">
+            <div class="search-input-wrapper">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="word-search-input" class="search-input" placeholder="İngilizce kelime yazın... (Örn: reluctant, meticulous, foster)" autocomplete="off" required />
+            </div>
+            <button type="submit" class="btn-primary" id="search-submit-btn">
+              <i class="fa-solid fa-arrow-right"></i> Ara & Getir
+            </button>
+          </form>
+        </div>
+
+        <!-- Dictionary Live Result Area -->
+        <div id="dict-result-container" class="dict-result" style="display: none;">
+          <!-- Content populated via JavaScript -->
+        </div>
+      </section>
+
+
+      <!-- ================= TAB 2: MY WORDS (DUAL LISTS) ================= -->
+      <section id="tab-words" class="tab-pane">
+        
+        <!-- Summary Stats Grid -->
+        <div class="stats-grid">
+          <div class="glass-card stat-card">
+            <div class="stat-icon total"><i class="fa-solid fa-book"></i></div>
+            <div class="stat-info">
+              <div class="value" id="stat-total-words">0</div>
+              <div class="label">Toplam Kelime</div>
+            </div>
+          </div>
+          <div class="glass-card stat-card">
+            <div class="stat-icon learning"><i class="fa-solid fa-clock-rotate-left"></i></div>
+            <div class="stat-info">
+              <div class="value" id="stat-learning-words">0</div>
+              <div class="label">Öğrenilmekte Olan</div>
+            </div>
+          </div>
+          <div class="glass-card stat-card">
+            <div class="stat-icon mastered"><i class="fa-solid fa-graduation-cap"></i></div>
+            <div class="stat-info">
+              <div class="value" id="stat-mastered-words">0</div>
+              <div class="label">Öğrenilenler</div>
+            </div>
+          </div>
+          <div class="glass-card stat-card">
+            <div class="stat-icon due"><i class="fa-solid fa-bell"></i></div>
+            <div class="stat-info">
+              <div class="value" id="stat-due-today">0</div>
+              <div class="label">Bugün Tekrar Et</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls Bar -->
+        <div class="list-controls">
+          <div class="sub-tabs">
+            <button class="sub-tab-btn active" id="sub-tab-learning" onclick="switchSubTab('learning')">
+              <i class="fa-solid fa-spinner"></i> Öğrenilmekte Olanlar (<span id="count-learning-badge">0</span>)
+            </button>
+            <button class="sub-tab-btn" id="sub-tab-mastered" onclick="switchSubTab('mastered')">
+              <i class="fa-solid fa-circle-check"></i> Öğrenilenler (<span id="count-mastered-badge">0</span>)
+            </button>
+          </div>
+
+          <div class="filter-group">
+            <div style="position: relative; flex: 1.5; min-width: 170px;">
+              <input type="text" id="words-filter-search" class="form-control" placeholder="Kelime veya anlam ara..." oninput="handleWordsSearchInput()" style="width: 100%; padding-right: 2rem;" />
+              <button id="words-search-clear" onclick="clearWordsSearch()" style="display: none; position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.9rem;" title="Aramayı Temizle">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
+            <select id="words-filter-box" class="form-control" onchange="renderWordsGrid()" style="width: 130px;">
+              <option value="all">Tüm Kutular</option>
+              <option value="1">Kutu 1 (Yeni)</option>
+              <option value="2">Kutu 2 (Orta)</option>
+              <option value="3">Kutu 3 (İyi)</option>
+              <option value="4">Kutu 4 (İleri)</option>
+            </select>
+            <select id="words-filter-pos" class="form-control" onchange="renderWordsGrid()" style="width: 140px;">
+              <option value="all">Tüm Türler</option>
+              <option value="noun">🔷 Noun (İsim)</option>
+              <option value="verb">🟢 Verb (Fiil)</option>
+              <option value="adjective">🟡 Adjective (Sıfat)</option>
+              <option value="adverb">🟠 Adverb (Zarf)</option>
+              <option value="pronoun">🔵 Pronoun (Zamir)</option>
+              <option value="preposition">🟣 Preposition (Edat)</option>
+              <option value="conjunction">🔴 Conjunction (Bağlaç)</option>
+            </select>
+            <select id="words-sort" class="form-control" onchange="renderWordsGrid()" style="width: 145px;">
+              <option value="az">🔤 Sıralama: A → Z</option>
+              <option value="za">🔤 Sıralama: Z → A</option>
+              <option value="newest">🕒 En Yeni Eklenenler</option>
+              <option value="box-asc">📦 Kutu: 1 → 5</option>
+              <option value="box-desc">📦 Kutu: 5 → 1</option>
+            </select>
+            <div class="view-mode-toggle">
+              <button class="view-mode-btn active" id="view-mode-grid-btn" onclick="setWordViewMode('grid')" title="Kart Görünümü">
+                <i class="fa-solid fa-border-all"></i>
+              </button>
+              <button class="view-mode-btn" id="view-mode-list-btn" onclick="setWordViewMode('list')" title="Kompakt Liste Görünümü">
+                <i class="fa-solid fa-list-ul"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- A-Z Alphabet Quick Jump Bar -->
+        <div class="alphabet-bar-wrapper">
+          <div class="alphabet-bar" id="words-alphabet-bar">
+            <!-- Dynamically generated A-Z letter pills -->
+          </div>
+        </div>
+
+        <!-- Words Meta Info & Page Size Bar -->
+        <div class="words-meta-bar">
+          <div id="words-count-info">
+            <strong>0</strong> kelime bulundu
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 0.82rem; color: var(--text-muted);">Sayfa Başı:</span>
+            <select id="words-per-page" class="form-control" style="padding: 0.25rem 0.5rem; font-size: 0.82rem; width: auto;" onchange="changeWordsPerPage(this.value)">
+              <option value="24" selected>24</option>
+              <option value="48">48</option>
+              <option value="96">96</option>
+              <option value="all">Tümü</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Words Grid / List Container -->
+        <div id="words-grid-container" class="words-grid">
+          <!-- Dynamic Word Cards or Compact Rows -->
+        </div>
+
+        <!-- Dynamic Pagination Controls -->
+        <div id="words-pagination-container" class="pagination-controls">
+          <!-- Dynamic pagination buttons -->
+        </div>
+      </section>
+
+
+      <!-- ================= TAB 3: PRACTICE MODES ================= -->
+      <section id="tab-practice" class="tab-pane">
+        
+        <!-- Practice Selector Screen -->
+        <div id="practice-selector-screen">
+          <div class="section-header text-center" style="text-align: center; margin-bottom: 2.5rem;">
+            <h1 class="section-title" style="justify-content: center;">
+              <i class="fa-solid fa-bullseye" style="color: var(--accent-primary);"></i> Akıllı Tekrar & Pratik Modları
+            </h1>
+            <p class="section-subtitle">Leitner aralıklı tekrar algoritması ile kelimeleri hafızanıza kazıyın.</p>
+          </div>
+
+          <div class="practice-selector">
+            <div class="glass-card practice-card" tabindex="0" onclick="startPracticeMode('flashcards')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); startPracticeMode('flashcards');}">
+              <div class="practice-icon"><i class="fa-solid fa-clone"></i></div>
+              <h3>Kart Çevirme (Flashcards)</h3>
+              <p>Aktif hatırlama yöntemi ile kelimeyi, sesli okunuşunu ve eş anlamlılarını kart çevirerek çalışın.</p>
+            </div>
+
+            <div class="glass-card practice-card" tabindex="0" onclick="startPracticeMode('quiz')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); startPracticeMode('quiz');}">
+              <div class="practice-icon"><i class="fa-solid fa-list-check"></i></div>
+              <h3>Eş Anlam Quiz Testi</h3>
+              <p>Kelimenin en uygun eş anlamlısını çoktan seçmeli şıklar arasından hızlıca bulun.</p>
+            </div>
+
+            <div class="glass-card practice-card" tabindex="0" onclick="startPracticeMode('spelling')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); startPracticeMode('spelling');}">
+              <div class="practice-icon"><i class="fa-solid fa-keyboard"></i></div>
+              <h3>Yazma & İmla Pratiği</h3>
+              <p>Eş anlamlıları ve tanımı verilen kelimenin doğru yazılışını klavyenizle tamamlayın.</p>
+            </div>
+
+            <div class="glass-card practice-card" tabindex="0" onclick="startPracticeMode('matching')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); startPracticeMode('matching');}">
+              <div class="practice-icon"><i class="fa-solid fa-puzzle-piece"></i></div>
+              <h3>Hızlı Eşleştirme Oyunu</h3>
+              <p>Zamana karşı kelimeler ile eş anlamlılarını kartlarda eşleştirerek hafızanızı tazeleyin.</p>
+            </div>
+
+            <div class="glass-card practice-card" tabindex="0" onclick="startPracticeMode('listening')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); startPracticeMode('listening');}">
+              <div class="practice-icon" style="background: linear-gradient(135deg, #06b6d4, #3b82f6);"><i class="fa-solid fa-headphones"></i></div>
+              <h3>Sesli Dinleme & Yakalama</h3>
+              <p>Sesli telaffuzu dinleyin ve doğru İngilizce kelimeyi veya karşılığını anında yakalayın.</p>
+            </div>
+
+            <div class="glass-card practice-card" tabindex="0" onclick="startPracticeMode('cloze')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); startPracticeMode('cloze');}">
+              <div class="practice-icon" style="background: linear-gradient(135deg, #ec4899, #8b5cf6);"><i class="fa-solid fa-pen-fancy"></i></div>
+              <h3>Cümle İçi Boşluk Doldurma</h3>
+              <p>Örnek cümle içindeki boşluğa bağlama en uygun hedef kelimeyi yerleştirin.</p>
+            </div>
+
+            <div class="glass-card practice-card" tabindex="0" onclick="startPracticeMode('speed')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault(); startPracticeMode('speed');}">
+              <div class="practice-icon" style="background: linear-gradient(135deg, #f59e0b, #ef4444);"><i class="fa-solid fa-bolt"></i></div>
+              <h3>Zamana Karşı Hız Testi (30sn)</h3>
+              <p>30 saniye boyunca ekrana gelen kelime eşleşmelerinin doğru veya yanlış olduğunu hızla seçin!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Practice Active Screen (Hidden by Default) -->
+        <div id="practice-active-screen" style="display: none;">
+          <div class="practice-active-nav">
+            <button class="btn-secondary" onclick="exitPracticeMode()">
+              <i class="fa-solid fa-arrow-left"></i> Pratik Seçimine Dön
+            </button>
+            <div id="practice-progress-text">Kart 1 / 10</div>
+          </div>
+
+          <!-- Dynamic Container for Active Game -->
+          <div id="active-game-container"></div>
+        </div>
+      </section>
+
+
+      <!-- ================= TAB 4: PARAGRAPH & QUESTION GENERATOR ================= -->
+      <section id="tab-generator" class="tab-pane">
+        <div class="section-header text-center" style="text-align: center; max-width: 700px; margin: 0 auto 2rem auto;">
+          <h1 class="section-title" style="justify-content: center;">
+            <i class="fa-solid fa-wand-magic-sparkles" style="color: #c084fc;"></i> Akıllı Paragraf & Soru Üretici
+          </h1>
+          <p class="section-subtitle">Öğrendiğiniz kelimelerden oluşan özgün okuma metinleri üretin ve metne bağlı soruları çözerek kelimeleri tam bağlamında kavrayın!</p>
+        </div>
+
+        <div class="glass-card" style="max-width: 850px; margin: 0 auto;">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+            <div>
+              <h3 style="font-family: var(--font-heading); font-size: 1.25rem;">Metinde Kullanılacak Kelimeler</h3>
+              <p style="font-size: 0.88rem; color: var(--text-secondary); margin-top: 0.25rem;">Kütüphanenizdeki kelimeler kullanılarak seviyenize uygun okuma metni ve kavrama soruları üretilir. Metindeki herhangi bir kelimeye tıklayarak anlamını görebilirsiniz.</p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button class="btn-secondary" onclick="generateStoryFromVocabulary('learning')" title="Henüz öğrenilmekte olan kelimelerden üret">
+                <i class="fa-solid fa-clock-rotate-left"></i> Öğrenilmekte Olanlardan
+              </button>
+              <button class="btn-secondary" onclick="generateStoryFromVocabulary('mastered')" title="Öğrenilmiş (usta) kelimelerden üret">
+                <i class="fa-solid fa-graduation-cap"></i> Öğrenilenlerden
+              </button>
+              <button class="btn-primary" onclick="generateStoryFromVocabulary('all')" title="Tüm kelime havuzundan rastgele üret">
+                <i class="fa-solid fa-wand-magic-sparkles"></i> Rastgele Metin Üret
+              </button>
+            </div>
+          </div>
+
+          <!-- Story Text Container -->
+          <div id="story-display-area" style="display: none;">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+              <h3 id="story-title" style="font-family: var(--font-heading); color: var(--accent-secondary); font-size: 1.4rem;"></h3>
+              <button class="btn-secondary" onclick="playStorySpeech()" id="story-audio-btn">
+                <i class="fa-solid fa-volume-high"></i> Paragrafı Dinle
+              </button>
+            </div>
+
+            <div id="story-paragraph-text" class="story-box"></div>
+
+            <!-- Questions Area -->
+            <div id="story-questions-container" style="margin-top: 2rem;">
+              <h3 style="font-family: var(--font-heading); margin-bottom: 1rem; font-size: 1.2rem;">
+                <i class="fa-solid fa-pen-to-square"></i> Metinle İlgili Sorular
+              </h3>
+              <div id="story-questions-list"></div>
+            </div>
+          </div>
+
+          <div id="story-empty-placeholder" style="text-align: center; padding: 3rem 1rem; color: var(--text-muted);">
+            <i class="fa-solid fa-newspaper" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+            <p>Yukarıdaki butonlardan birine tıklayarak kelimelerinizden oluşan akıcı bir hikaye ve soru seti üretebilirsiniz!</p>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ================= TAB 5: BUNDLES & SETTINGS ================= -->
+      <section id="tab-bundles" class="tab-pane">
+        <div class="section-header">
+          <h1 class="section-title"><i class="fa-solid fa-box-archive"></i> Hazır Kelime Paketleri & Ayarlar</h1>
+          <p class="section-subtitle">Sıfırdan başlamak istemiyorsanız seviyenize uygun kelime paketlerini 1-tıkla listelerinize ekleyin.</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 3rem;">
+          
+          <div class="glass-card glass-card-hover">
+            <h3 style="font-family: var(--font-heading); font-size: 1.3rem; margin-bottom: 0.5rem; color: #3b82f6;">
+              <i class="fa-solid fa-star"></i> Temel İngilizce (B1 - B2)
+            </h3>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.25rem;">Günlük hayatta en sık kullanılan 15 temel kelime ve eş anlamlıları.</p>
+            <button class="btn-secondary" style="width: 100%;" onclick="loadPresetBundle('essential')">
+              <i class="fa-solid fa-download"></i> Paketi Yükle (15 Kelime)
+            </button>
+          </div>
+
+          <div class="glass-card glass-card-hover">
+            <h3 style="font-family: var(--font-heading); font-size: 1.3rem; margin-bottom: 0.5rem; color: #8b5cf6;">
+              <i class="fa-solid fa-graduation-cap"></i> Akademik & YDS / YÖKDİL
+            </h3>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.25rem;">Akademik makalelerde ve sınavlarda sıkça çıkan üst seviye kelimeler.</p>
+            <button class="btn-secondary" style="width: 100%;" onclick="loadPresetBundle('academic')">
+              <i class="fa-solid fa-download"></i> Paketi Yükle (15 Kelime)
+            </button>
+          </div>
+
+          <div class="glass-card glass-card-hover">
+            <h3 style="font-family: var(--font-heading); font-size: 1.3rem; margin-bottom: 0.5rem; color: #06b6d4;">
+              <i class="fa-solid fa-rocket"></i> TOEFL & IELTS İleri Seviye
+            </h3>
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 1.25rem;">Uluslararası İngilizce sınavlarında yüksek puan getirecek kelimeler.</p>
+            <button class="btn-secondary" style="width: 100%;" onclick="loadPresetBundle('advanced')">
+              <i class="fa-solid fa-download"></i> Paketi Yükle (15 Kelime)
+            </button>
+          </div>
+
+        </div>
+
+        <!-- PWA Installation & App Mode Card -->
+        <div class="glass-card" style="max-width: 600px; margin-bottom: 1.5rem; border: 1px solid rgba(99, 102, 241, 0.4); background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(6, 182, 212, 0.08));">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 0.75rem;">
+            <h3 style="font-family: var(--font-heading); font-size: 1.2rem; margin: 0; color: var(--accent-secondary);">
+              <i class="fa-solid fa-mobile-screen"></i> Uygulama Olarak Kullan (PWA)
+            </h3>
+            <span style="font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); color: var(--success); font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.3);">
+              <i class="fa-solid fa-wifi"></i> Çevrimdışı Destekli
+            </span>
+          </div>
+          <p style="font-size: 0.88rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 1rem;">
+            VocabMaster'ı bilgisayarınıza, Android veya iPhone telefonunuza tek dokunuşla tam ekran bağımsız bir mobil uygulama olarak yükleyebilirsiniz. İnternet olmadan da kelimelerinize erişebilirsiniz.
+          </p>
+          <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <button class="btn-primary" onclick="triggerPWAInstall()" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">
+              <i class="fa-solid fa-circle-down"></i> Uygulamayı Şimdi Yükle
+            </button>
+            <button class="btn-secondary" onclick="showInstallInstructionsModal()" style="padding: 0.6rem 1rem; font-size: 0.88rem;">
+              <i class="fa-solid fa-circle-info"></i> Telefon Yükleme Rehberi
+            </button>
+          </div>
+        </div>
+
+        <!-- Data Backup & Reset Card -->
+        <div class="glass-card" style="max-width: 600px;">
+          <h3 style="font-family: var(--font-heading); font-size: 1.2rem; margin-bottom: 1rem;">
+            <i class="fa-solid fa-database"></i> Veri Yedekleme & Yönetim
+          </h3>
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <button class="btn-secondary" onclick="exportUserData()">
+              <i class="fa-solid fa-file-export"></i> Verileri Dışa Aktar (JSON)
+            </button>
+            <button class="btn-secondary" onclick="document.getElementById('import-file-input').click()">
+              <i class="fa-solid fa-file-import"></i> İçeri Aktar
+            </button>
+            <input type="file" id="import-file-input" style="display: none;" onchange="importUserData(event)" accept=".json" />
+            <button class="btn-secondary" style="color: var(--danger); border-color: var(--danger-bg);" onclick="resetAllData()">
+              <i class="fa-solid fa-trash-can"></i> Sıfırla
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- PWA INSTALLATION GUIDE MODAL -->
+  <div id="pwa-install-modal" class="glass-card" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10001; width: 90%; max-width: 480px; max-height: 85vh; overflow-y: auto; padding: 1.75rem; box-shadow: 0 20px 50px rgba(0,0,0,0.6); border: 2px solid var(--accent-primary); background: var(--bg-secondary);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+      <h3 style="font-family: var(--font-heading); font-size: 1.3rem; margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+        <i class="fa-solid fa-mobile-screen-button" style="color: var(--accent-secondary);"></i> Uygulamayı Yükleme Rehberi
+      </h3>
+      <button class="card-action-icon" onclick="closeInstallInstructionsModal()" title="Kapat">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 1rem; font-size: 0.9rem; line-height: 1.5;">
+      
+      <!-- Android -->
+      <div style="background: rgba(255,255,255,0.03); padding: 0.85rem 1rem; border-radius: var(--radius-md); border-left: 3px solid #10b981;">
+        <div style="font-weight: 700; color: #10b981; margin-bottom: 0.35rem;">
+          <i class="fa-brands fa-android"></i> Android (Chrome)
+        </div>
+        <div>Sağ üstteki <strong>üç nokta (⋮)</strong> menüsüne dokunun ve <strong>"Uygulamayı Yükle"</strong> veya <strong>"Ana Ekrana Ekle"</strong> butonuna basın.</div>
+      </div>
+
+      <!-- iPhone / iPad -->
+      <div style="background: rgba(255,255,255,0.03); padding: 0.85rem 1rem; border-radius: var(--radius-md); border-left: 3px solid #06b6d4;">
+        <div style="font-weight: 700; color: #06b6d4; margin-bottom: 0.35rem;">
+          <i class="fa-brands fa-apple"></i> iPhone & iPad (Safari)
+        </div>
+        <div>Safari'nin altındaki <strong>Paylaş</strong> simgesine dokunun (yukarı oklu kare), aşağı kaydırıp <strong>"Ana Ekrana Ekle"</strong> seçeneğini seçin.</div>
+      </div>
+
+      <!-- Windows / Mac Desktop -->
+      <div style="background: rgba(255,255,255,0.03); padding: 0.85rem 1rem; border-radius: var(--radius-md); border-left: 3px solid var(--accent-primary);">
+        <div style="font-weight: 700; color: var(--accent-secondary); margin-bottom: 0.35rem;">
+          <i class="fa-solid fa-laptop"></i> Bilgisayar (Chrome, Edge)
+        </div>
+        <div>Tarayıcınızın adres çubuğundaki <strong>Yükle</strong> simgesine veya sitemizdeki <strong>"Uygulamayı Yükle"</strong> butonuna tıklayarak masaüstü uygulaması olarak açabilirsiniz.</div>
+      </div>
+
+      <!-- Offline & DB Info -->
+      <div style="background: rgba(139, 92, 246, 0.1); padding: 0.85rem 1rem; border-radius: var(--radius-md); border: 1px solid rgba(139, 92, 246, 0.3);">
+        <div style="font-weight: 700; color: #a78bfa; margin-bottom: 0.25rem;">
+          <i class="fa-solid fa-cloud"></i> Çevrimdışı & Veri Tabanı
+        </div>
+        <div style="color: var(--text-secondary); font-size: 0.85rem;">
+          Tüm kelimeleriniz cihazınızda anında kaydedilir ve internetiniz olmasa dahi kesintisiz çalışır. Farklı cihazlara taşımak için "Paketler" sekmesinden <strong>JSON Dışa Aktar</strong> yapabilirsiniz.
+        </div>
+      </div>
+
+    </div>
+
+    <div style="margin-top: 1.5rem; text-align: right;">
+      <button class="btn-primary" onclick="closeInstallInstructionsModal()" style="width: 100%;">
+        Anladım
+      </button>
+    </div>
+  </div>
+
+  <!-- PWA Modal Backdrop Overlay -->
+  <div id="pwa-modal-backdrop" onclick="closeInstallInstructionsModal()" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 10000;"></div>
+
+  <!-- Canvas Confetti Library for Celebrations -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <!-- Application Logic JavaScript -->
+  <script src="app.js?v=2"></script>
+</body>
+</html>
